@@ -10,12 +10,62 @@ import UIKit
 class ViewController: UICollectionViewController {
     
     var people = [Person]()
+    let defaults = UserDefaults.standard
     
     override func viewDidLoad() {
         super.viewDidLoad()
      
         navigationItem.rightBarButtonItem = UIBarButtonItem(barButtonSystemItem: .add, target: self, action: #selector(newPerson))
+        
+        if let savedData = defaults.object(forKey: "people") as? Data {
+//            if let decodedPeople = try? NSKeyedUnarchiver.unarchivedObject(ofClasses: [Person.self], from: savedData) as? [Person] ?? [Person]() {
+//                people = decodedPeople
+//            }
+            
+            // deprecated
+            if let decodedPeople = try? NSKeyedUnarchiver.unarchiveTopLevelObjectWithData(savedData) as? [Person] ?? [Person]() {
+                people = decodedPeople
+            }
+        }
+        
     }
+    
+    func save() {
+        if let savedData = try? NSKeyedArchiver.archivedData(withRootObject: people, requiringSecureCoding: false) {
+            defaults.set(savedData, forKey: "people")
+        }
+    }
+    
+    func renamePerson(_ person: Person) {
+        let ac = UIAlertController(title: "Rename person", message: nil, preferredStyle: .alert)
+        ac.addTextField()
+        ac.addAction(UIAlertAction(title: "OK", style: .default) { [weak self, weak ac] _ in
+            guard let newName = ac?.textFields?[0].text else { return }
+            person.name = newName
+            self?.save()
+            self?.collectionView.reloadData()
+        })
+        ac.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        
+        present(ac, animated: true)
+    }
+
+    func deletePerson(_ index: Int) {
+        let ac = UIAlertController(title: "Are you sure to delete this photo?", message: nil, preferredStyle: .alert)
+        ac.addAction(UIAlertAction(title: "Yes", style: .default) { [weak self] _ in
+            self?.people.remove(at: index)
+            self?.collectionView.reloadData()
+        })
+        ac.addAction(UIAlertAction(title: "No", style: .cancel))
+        
+        present(ac, animated: true)
+    }
+    
+}
+
+
+// MARK: - UICollectionViewController method
+extension ViewController {
     
     override func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
         return people.count
@@ -57,30 +107,6 @@ class ViewController: UICollectionViewController {
         
     }
     
-    func renamePerson(_ person: Person) {
-        let ac = UIAlertController(title: "Rename person", message: nil, preferredStyle: .alert)
-        ac.addTextField()
-        ac.addAction(UIAlertAction(title: "OK", style: .default) { [weak self, weak ac] _ in
-            guard let newName = ac?.textFields?[0].text else { return }
-            person.name = newName
-            self?.collectionView.reloadData()
-        })
-        ac.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-        
-        present(ac, animated: true)
-    }
-
-    func deletePerson(_ index: Int) {
-        let ac = UIAlertController(title: "Are you sure to delete this photo?", message: nil, preferredStyle: .alert)
-        ac.addAction(UIAlertAction(title: "Yes", style: .default) { [weak self] _ in
-            self?.people.remove(at: index)
-            self?.collectionView.reloadData()
-        })
-        ac.addAction(UIAlertAction(title: "No", style: .cancel))
-        
-        present(ac, animated: true)
-    }
-    
 }
 
 
@@ -108,6 +134,7 @@ extension ViewController: UIImagePickerControllerDelegate, UINavigationControlle
         
         let person = Person(name: "Unknown", imageName: imageName)
         people.append(person)
+        save()
         collectionView.reloadData()
         
         dismiss(animated: true)
