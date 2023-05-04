@@ -18,21 +18,24 @@ class ViewController: UICollectionViewController {
         navigationItem.rightBarButtonItem = UIBarButtonItem(barButtonSystemItem: .add, target: self, action: #selector(newPerson))
         
         if let savedData = defaults.object(forKey: "people") as? Data {
-//            if let decodedPeople = try? NSKeyedUnarchiver.unarchivedObject(ofClasses: [Person.self], from: savedData) as? [Person] ?? [Person]() {
-//                people = decodedPeople
-//            }
+            let jsonDecoder = JSONDecoder()
             
-            // deprecated
-            if let decodedPeople = try? NSKeyedUnarchiver.unarchiveTopLevelObjectWithData(savedData) as? [Person] ?? [Person]() {
-                people = decodedPeople
+            do {
+                people = try jsonDecoder.decode([Person].self, from: savedData)
+            } catch {
+                print("Failed to load people.")
             }
         }
         
     }
     
     func save() {
-        if let savedData = try? NSKeyedArchiver.archivedData(withRootObject: people, requiringSecureCoding: false) {
+        let jsonEncoder = JSONEncoder()
+    
+        if let savedData = try? jsonEncoder.encode(people) {
             defaults.set(savedData, forKey: "people")
+        } else {
+            print("Failed to save people.")
         }
     }
     
